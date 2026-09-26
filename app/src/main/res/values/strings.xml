@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">TapTill KDS</string>
+    <!-- app_name comes from APP_NAME in /kds.properties -->
     <string name="loading">Loading…</string>
     <string name="offline_title">Cannot reach the kitchen display</string>
     <string name="offline_message">Check the TV\'s network connection. Retrying automatically…</string>
@@ -21,7 +21,7 @@
     <string name="notification_channel_name">Kitchen alerts</string>
     <string name="notification_channel_description">New orders and other alerts from the kitchen display</string>
     <string name="autostart_title">Start automatically when the TV turns on</string>
-    <string name="autostart_message">To open TapTill KDS automatically after the TV restarts, allow \"Display over other apps\" for it on the next screen.\n\nIf that screen is not available on this TV, run this from a computer instead:\nadb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
+    <string name="autostart_message">To open this app automatically after the TV restarts, allow \"Display over other apps\" for it on the next screen.\n\nIf that screen is not available on this TV, run this from a computer instead:\nadb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
     <string name="autostart_no_settings">This TV has no settings screen for it. Use the adb command instead.</string>
     <string name="open_settings">Open settings</string>
     <string name="not_now">Not now</string>

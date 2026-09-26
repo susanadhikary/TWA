@@ -4,12 +4,19 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      kds_url:
+        description: "Optional: build for a different https:// URL (leave empty to use kds.properties)"
+        required: false
+        default: ""
 
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
       KEYSTORE_BASE64: ${{ secrets.KDS_KEYSTORE_BASE64 }}
+      # Extra Gradle args; set when a URL is given on a manual run.
+      GRADLE_ARGS: ${{ inputs.kds_url != '' && format('-PKDS_URL={0}', inputs.kds_url) || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -22,7 +29,7 @@ jobs:
       - name: Build debug APK
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug
+          ./gradlew --no-daemon $GRADLE_ARGS assembleDebug
 
       - name: Build signed release APK
         if: ${{ env.KEYSTORE_BASE64 != '' }}
@@ -33,14 +40,14 @@ jobs:
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           export KDS_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
-          ./gradlew --no-daemon assembleRelease
+          ./gradlew --no-daemon $GRADLE_ARGS assembleRelease
           rm -f "$RUNNER_TEMP/release.jks"
 
       - name: Build unsigned release APK
         if: ${{ env.KEYSTORE_BASE64 == '' }}
         run: |
           echo "::notice::Signing secrets not set - release APK is unsigned (see README to add KDS_KEYSTORE_* secrets)."
-          ./gradlew --no-daemon assembleRelease
+          ./gradlew --no-daemon $GRADLE_ARGS assembleRelease
 
       - uses: actions/upload-artifact@v4
         with:

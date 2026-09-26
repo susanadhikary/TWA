@@ -1,7 +1,8 @@
 # TapTill KDS – Android TV app
 
 An Android TV app that shows the TapTill kitchen display
-(`https://pos.narayanipauroti.com.np/kds`) full screen.
+full screen. It opens the URL set in [`kds.properties`](kds.properties),
+currently `https://pos.narayanipauroti.com.np/kds`.
 
 ## Nothing else to install
 
@@ -105,8 +106,24 @@ KDS_KEYSTORE_PASSWORD=... KDS_KEY_ALIAS=taptill-kds KDS_KEY_PASSWORD=... \
 
 You can also sideload the APK with a USB drive or the *Downloader* app.
 
-## Configuration
+## Configuration: changing the URL, name or version
 
-- **URL:** `START_URL` in `app/build.gradle.kts`.
-- **Name:** `app_name` in `app/src/main/res/values/strings.xml`.
+Everything you normally change is in one file, **[`kds.properties`](kds.properties)**:
+
+```properties
+KDS_URL=https://pos.narayanipauroti.com.np/kds   # must be https://
+APP_NAME=TapTill KDS
+VERSION_CODE=2      # raise this for every release (3, 4, ...)
+VERSION_NAME=1.1.0
+```
+
+Edit it, push, and GitHub Actions builds the new APK. To build once for a
+different URL without editing the file, use **Actions → Build Android TV APK →
+Run workflow** and fill in `kds_url`.
+
+**Full step-by-step guide:** [docs/CHANGE-URL-AND-REBUILD.md](docs/CHANGE-URL-AND-REBUILD.md).
+It covers building, signing, updating TVs, troubleshooting, and the rules you
+must not break.
+
 - **Icons:** generated from the icons in the PWA manifest (`https://pos.narayanipauroti.com.np/manifest.webmanifest`). They live in `res/mipmap-*` (launcher), `res/drawable-*/ic_launcher_foreground.png` (adaptive), `res/drawable-xhdpi/banner.png` (TV banner) and `res/drawable-nodpi/app_logo.png` (splash).
+- **Signing an unsigned APK locally:** `scripts/sign-apk.sh <unsigned.apk> <keystore.jks>`.
