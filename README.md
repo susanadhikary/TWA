@@ -62,6 +62,9 @@ the app rebuilds the page automatically.
 
 ## Getting the APK
 
+The latest signed release is committed in [`releases/`](releases/):
+`releases/TapTill-KDS-1.1.0-release.apk` (version 1.1.0, build 2). Its SHA-256 checksum is in `releases/SHA256SUMS`.
+
 Every push runs the **Build Android TV APK** GitHub Actions workflow. Open the run
 in the *Actions* tab and download the `taptill-kds-apk` artifact. It contains:
 
