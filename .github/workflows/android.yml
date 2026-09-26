@@ -34,9 +34,14 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           export KDS_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
           ./gradlew --no-daemon assembleRelease
+          rm -f "$RUNNER_TEMP/release.jks"
+
+      - name: Note missing signing secrets
+        if: ${{ env.KEYSTORE_BASE64 == '' }}
+        run: echo "::notice::Release APK skipped - add the KDS_KEYSTORE_* repository secrets to build a signed release (see README)."
 
       - uses: actions/upload-artifact@v4
         with:
-          name: narayani-kds-apk
+          name: taptill-kds-apk
           path: app/build/outputs/apk/**/*.apk
           if-no-files-found: error

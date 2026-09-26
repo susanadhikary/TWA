@@ -1,65 +1,108 @@
-# Narayani KDS – Android TV app
+# TapTill KDS – Android TV app
 
-An Android TV app that shows the kitchen display PWA at
-**https://pos.narayanipauroti.com.np/kds** in full screen.
+An Android TV app that shows the TapTill kitchen display
+(`https://pos.narayanipauroti.com.np/kds`) full screen.
 
-Android TV devices usually don't have Chrome installed, and a Trusted Web
-Activity (TWA) needs Chrome to run. So this app uses the built-in Android
-System WebView instead.
+## Nothing else to install
 
-## Features
+The app uses **Android System WebView**, which is built into every Android TV and
+Google TV. You don't need to install Chrome or any other browser.
 
-- Shows up on the Android TV home screen (Leanback launcher + banner). It also installs on phones, tablets and Fire TV.
-- Full screen, landscape, and the screen stays on.
-- Sound alerts can play without a tap (`mediaPlaybackRequiresUserGesture = false`).
-- Keeps cookies and localStorage, so the KDS login stays saved.
-- Shows an offline screen and retries automatically every 10 seconds when the network drops.
-- Rebuilds the WebView if its renderer crashes, so the display keeps running.
-- Remote keys: **MENU** reloads the page. **BACK** goes back in page history, and pressing BACK twice exits the app.
+- The web address is never shown. There is no address bar, and pop-up dialogs are titled "TapTill KDS" instead of showing the URL. Error screens are the app's own screens.
+- Links always open inside the app. Other link types (`intent:`, `market:`, and so on) are blocked, so the KDS never hands off to a browser.
+- Long-pressing does nothing: no text selection or "search the web" menu.
+- A branded splash screen shows while the KDS loads.
+- If WebView is disabled on a TV, the app shows how to turn it back on. If WebView is very old, the app asks you to update it.
+
+## Browser features included
+
+| Web feature | How it works in the app |
+|---|---|
+| Notifications (`Notification`, `registration.showNotification`) | Shown as native Android notifications on the "Kitchen alerts" channel. Tapping one opens the app and sends a `click` event to the page. |
+| Location (`navigator.geolocation`) | Uses Android's location permission. |
+| Camera / microphone (`getUserMedia`) | Uses the camera and microphone permissions. |
+| Alert, confirm and prompt dialogs | Native dialogs titled "TapTill KDS". |
+| File upload (`<input type=file>`) | Opens the system file picker. |
+| Downloads (http, `blob:`, `data:`) | Saved to the Downloads folder. |
+| `window.print()` | Android print dialog. |
+| `navigator.share()` | Android share sheet. |
+| `window.open` / `target=_blank` | Opens as a full-screen layer inside the app. BACK closes it. |
+| Fullscreen video / Fullscreen API | Supported. |
+| Screen Wake Lock | The screen always stays on. |
+| Cookies, localStorage, IndexedDB, service worker cache | Kept between restarts, so staff stay logged in. |
+| Autoplaying sounds | Allowed, so order alerts can play without a tap. |
+
+Only the KDS site gets these features. Any other site opened inside the app is refused.
+
+On first launch, the app asks once for the location, camera, microphone and
+notification permissions.
+
+## Remote control and mouse
+
+- **Remote:** the D-pad moves an on-screen pointer, which speeds up while held. **OK** clicks. Holding the pointer against a screen edge scrolls. **CH+/CH−** (or Page Up/Down) scroll by a page. The pointer hides after 6 seconds without use.
+- **Mouse or touch:** works normally, and the remote pointer hides.
+- **Keyboard:** arrow keys go straight to the page.
+- **MENU** reloads the page. **BACK** goes back or closes a pop-up. Press **BACK** twice to exit.
+
+## Start on boot
+
+The app opens itself when the TV starts up. On Android 10 and later, Android only
+allows this after you turn on **Display over other apps** for TapTill KDS. The app
+asks for this on first launch. If the TV has no screen for that setting, run:
+
+```sh
+adb shell appops set np.com.narayanipauroti.kds SYSTEM_ALERT_WINDOW allow
+```
+
+## Offline handling
+
+If the network drops, the app shows its own "Cannot reach the kitchen display"
+screen and retries every 10 seconds. If the web page's rendering process crashes,
+the app rebuilds the page automatically.
 
 ## Getting the APK
 
-Every push runs the **Build Android TV APK** GitHub Actions workflow.
-Open the run in the *Actions* tab and download the `narayani-kds-apk` artifact.
+Every push runs the **Build Android TV APK** GitHub Actions workflow. Open the run
+in the *Actions* tab and download the `taptill-kds-apk` artifact. It contains:
 
-### Signed release build (optional)
+- `debug/TapTill-KDS-debug.apk`, which is always built.
+- `release/TapTill-KDS-release.apk`, a signed build that is only made when the signing secrets are set.
 
-To also get a signed release APK, add these repository secrets:
+### Release signing
+
+Add these repository secrets (*Settings → Secrets and variables → Actions*):
 
 | Secret | Value |
 | --- | --- |
-| `KDS_KEYSTORE_BASE64` | `base64 -w0 release.jks` |
+| `KDS_KEYSTORE_BASE64` | `base64 -w0 taptill-kds-release.jks` |
 | `KDS_KEYSTORE_PASSWORD` | keystore password |
-| `KDS_KEY_ALIAS` | key alias |
+| `KDS_KEY_ALIAS` | `taptill-kds` |
 | `KDS_KEY_PASSWORD` | key password |
 
-Create a keystore with:
+Never commit the keystore. Keep a backup: without it, you can't publish updates to
+installed copies of the app.
+
+To build a signed release locally:
 
 ```sh
-keytool -genkeypair -v -keystore release.jks -alias kds -keyalg RSA -keysize 2048 -validity 10000
-```
-
-## Building locally
-
-This needs JDK 17+ and the Android SDK (compile SDK 35).
-
-```sh
-./gradlew assembleDebug
-# APK: app/build/outputs/apk/debug/app-debug.apk
+KDS_KEYSTORE_PATH=/path/to/taptill-kds-release.jks \
+KDS_KEYSTORE_PASSWORD=... KDS_KEY_ALIAS=taptill-kds KDS_KEY_PASSWORD=... \
+./gradlew assembleRelease
 ```
 
 ## Installing on the TV
 
 1. On the TV, go to *Settings → Device Preferences → About* and click *Build* 7 times. This turns on Developer options.
-2. In *Developer options*, turn on **ADB debugging** (network debugging on newer TVs).
+2. In *Developer options*, turn on **USB debugging** or **Network debugging**.
 3. From your computer, run:
    ```sh
    adb connect <tv-ip-address>
-   adb install -r app-debug.apk
+   adb install -r TapTill-KDS-release.apk
    ```
 
-You can also sideload the APK with a USB drive or the *Downloader* / *Send Files to TV* apps.
+You can also sideload the APK with a USB drive or the *Downloader* app.
 
-## Changing the URL
+## Configuration
 
-Edit `START_URL` in `app/build.gradle.kts`.
+- **URL:** `START_URL` in `app/build.gradle.kts`.
+- **Name:** `app_name` in `app/src/main/res/values/strings.xml`.
