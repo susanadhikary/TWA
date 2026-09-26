@@ -1,0 +1,6 @@
+<resources>
+    <color name="background">#FF111418</color>
+    <color name="brand">#FFE65100</color>
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FFB0B7C3</color>
+</resources>

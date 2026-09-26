@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Narayani KDS</string>
+    <string name="offline_title">Cannot reach the kitchen display</string>
+    <string name="offline_message">Check the TV\'s network connection. Retrying automatically…</string>
+    <string name="retry">Retry now</string>
+    <string name="press_back_again">Press BACK again to exit</string>
+</resources>

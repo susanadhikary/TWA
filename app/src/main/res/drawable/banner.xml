@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 320x180dp Android TV home-screen banner. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path android:fillColor="#FF111418" android:pathData="M0,0h320v180h-320z" />
+    <path android:fillColor="#FFE65100" android:pathData="M0,150h320v30h-320z" />
+    <!-- Cooking pot -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M40,70h80v8h-4v34a10,10 0,0 1,-10 10h-52a10,10 0,0 1,-10 -10v-34h-4z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M72,58h16v8h-16z" />
+    <path android:fillColor="#00000000"
+        android:pathData="M58,40c-4,6 4,8 0,14 M78,36c-4,6 4,8 0,14 M98,40c-4,6 4,8 0,14"
+        android:strokeColor="#FFE65100" android:strokeWidth="4" android:strokeLineCap="round" />
+    <!-- "KDS" block letters -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M145,60h12v22l18,-22h15l-20,24l21,28h-15l-15,-21l-4,5v16h-12z" />
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M198,60h18c16,0 26,10 26,26s-10,26 -26,26h-18zM210,71v30h6c9,0 14,-6 14,-15s-5,-15 -14,-15z" />
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M292,66l-6,9c-5,-4 -10,-5 -14,-5c-4,0 -6,2 -6,4c0,3 3,4 9,6c10,3 17,7 17,16c0,10 -8,17 -20,17c-8,0 -15,-3 -20,-8l7,-9c4,4 9,6 13,6c5,0 7,-2 7,-5c0,-3 -3,-4 -9,-6c-10,-3 -16,-7 -16,-16c0,-9 7,-15 18,-15c7,0 13,2 19,6z" />
+</vector>
