@@ -106,3 +106,4 @@ You can also sideload the APK with a USB drive or the *Downloader* app.
 
 - **URL:** `START_URL` in `app/build.gradle.kts`.
 - **Name:** `app_name` in `app/src/main/res/values/strings.xml`.
+- **Icons:** generated from the icons in the PWA manifest (`https://pos.narayanipauroti.com.np/manifest.webmanifest`). They live in `res/mipmap-*` (launcher), `res/drawable-*/ic_launcher_foreground.png` (adaptive), `res/drawable-xhdpi/banner.png` (TV banner) and `res/drawable-nodpi/app_logo.png` (splash).
