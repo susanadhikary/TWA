@@ -167,7 +167,8 @@ The app fixes this with **`VIEWPORT_WIDTH`** in `kds.properties`:
 
 | `VIEWPORT_WIDTH` | What the KDS page sees | Use when |
 |---|---|---|
-| **`1920`** (default) | A **1920 × 1080** screen on every TV (720p, 1080p, 4K), scaled to fill it exactly with no scrolling. The same as a Full-HD desktop browser. | The KDS is designed for Full-HD screens (usual). |
+| **`1470`** (default) | A **1470 × 827** screen on every TV (720p, 1080p, 4K), scaled to fill it exactly. The same width as a 13" MacBook Air browser window: 5 KOT tickets per row. | You want the TV to look like the KDS on a laptop. |
+| `1920` | A 1920 × 1080 screen: a Full-HD desktop browser. More tickets per row, smaller text. | Large TVs, or you want more tickets visible. |
 | `1280` | A 1280 × 720 screen: everything looks bigger. | Text is too small for the kitchen's viewing distance. |
 | `2560`, `3840`, … | A bigger canvas: everything looks smaller and more tickets fit. | Large 4K screens viewed up close. |
 | `auto` | Whatever the page's own `<meta name="viewport">` decides (usually 960 × 540 on TVs). | The KDS already adapts itself to TV WebViews. |
@@ -228,7 +229,7 @@ Everything you'd normally change is in **[`kds.properties`](kds.properties)**:
 ```properties
 KDS_URL=https://pos.narayanipauroti.com.np/kds   # page the app opens (https only)
 KDS_SCOPE=https://pos.narayanipauroti.com.np/    # pages that get notifications, camera, location…
-VIEWPORT_WIDTH=1920                               # page layout width: 1920 = Full-HD on every TV, or auto
+VIEWPORT_WIDTH=1470                               # page layout width: 1470 = 13" MacBook Air look (5 tickets/row)
 REMOTE_POINTER=false                              # false = remote keys go to the KDS page
 APP_NAME=TapTill KDS                              # name on the TV home screen
 VERSION_CODE=2                                    # raise for every release: 3, 4, 5…
