@@ -13,9 +13,9 @@ the app in one step. See [Change the URL, scope or name](#change-the-url-scope-o
 |---|---|
 | **App name** | TapTill KDS |
 | **App ID** | `np.com.narayanipauroti.kds` (never change it, see [Rules](#rules-you-must-not-break)) |
-| **Current version** | 1.1.0 (version code 2) |
+| **Current version** | 1.2.0 (version code 3) |
 | **Runs on** | Android TV / Google TV 5.0+ (API 21+). Also installs on Android phones, tablets and Fire TV. |
-| **Latest signed APK** | [`releases/TapTill-KDS-1.1.0-release.apk`](releases/) |
+| **Latest signed APK** | [`releases/TapTill-KDS-1.2.0-release.apk`](releases/) |
 | **Step-by-step rebuild guide** | [`docs/CHANGE-URL-AND-REBUILD.md`](docs/CHANGE-URL-AND-REBUILD.md) |
 
 ---
@@ -56,13 +56,13 @@ the app in one step. See [Change the URL, scope or name](#change-the-url-scope-o
 
 **Install the current version on a TV:**
 
-1. Download [`releases/TapTill-KDS-1.1.0-release.apk`](releases/).
+1. Download [`releases/TapTill-KDS-1.2.0-release.apk`](releases/).
 2. On the TV: *Settings → Device Preferences → About*, click **Build** 7 times.
    Then turn on **USB debugging** or **Network debugging** in *Developer options*.
 3. From a computer on the same network:
    ```sh
    adb connect <tv-ip-address>
-   adb install -r TapTill-KDS-1.1.0-release.apk
+   adb install -r TapTill-KDS-1.2.0-release.apk
    ```
 4. Open **TapTill KDS** from the TV home screen and allow the permissions it asks for.
 
@@ -232,8 +232,8 @@ KDS_SCOPE=https://pos.narayanipauroti.com.np/    # pages that get notifications,
 VIEWPORT_WIDTH=1470                               # page layout width: 1470 = 13" MacBook Air look (5 tickets/row)
 REMOTE_POINTER=false                              # false = remote keys go to the KDS page
 APP_NAME=TapTill KDS                              # name on the TV home screen
-VERSION_CODE=2                                    # raise for every release: 3, 4, 5…
-VERSION_NAME=1.1.0                                # version shown to people
+VERSION_CODE=3                                    # raise for every release: 3, 4, 5…
+VERSION_NAME=1.2.0                                # version shown to people
 ```
 
 ### The helper script
