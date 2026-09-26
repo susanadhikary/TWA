@@ -82,6 +82,8 @@ function Show-Config {
     Write-Host "  App name     : $(Get-Prop 'APP_NAME')"
     Write-Host "  Version code : $(Get-Prop 'VERSION_CODE')"
     Write-Host "  Version name : $(Get-Prop 'VERSION_NAME')"
+    Write-Host "  Screen width : $(Get-Prop 'VIEWPORT_WIDTH')   (VIEWPORT_WIDTH: auto or e.g. 1920)"
+    Write-Host "  Remote ptr   : $(Get-Prop 'REMOTE_POINTER')   (REMOTE_POINTER: false = keys go to the page)"
 }
 
 # ---------------------------------------------------------------- URL checks

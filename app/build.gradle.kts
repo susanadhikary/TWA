@@ -49,6 +49,17 @@ val kdsScope = (kdsOptionalSetting("KDS_SCOPE") ?: (originOf(URI(kdsUrl)) + "/")
 }
 val kdsAppName = kdsSetting("APP_NAME")
     .replace("\\", "\\\\").replace("'", "\\'").replace("\"", "\\\"")
+// Screen: fixed CSS layout width (e.g. 1920) so the KDS looks the same on every TV,
+// or "auto" to let the page's own <meta name="viewport"> decide.
+val kdsViewportWidth = (kdsOptionalSetting("VIEWPORT_WIDTH") ?: "auto").let { v ->
+    if (v.equals("auto", ignoreCase = true)) 0
+    else v.toIntOrNull()?.takeIf { it in 320..7680 }
+        ?: error("kds.properties: VIEWPORT_WIDTH must be auto or a width in CSS pixels between 320 and 7680 (got \"$v\")")
+}
+// Remote: false = D-pad/OK go straight to the web page (for remote-ready UIs);
+// true = D-pad moves an on-screen pointer and OK clicks.
+val kdsRemotePointer = (kdsOptionalSetting("REMOTE_POINTER") ?: "false").lowercase().toBooleanStrictOrNull()
+    ?: error("kds.properties: REMOTE_POINTER must be true or false")
 val kdsVersionCode = kdsSetting("VERSION_CODE").toIntOrNull()?.takeIf { it > 0 }
     ?: error("kds.properties: VERSION_CODE must be a positive whole number")
 val kdsVersionName = kdsSetting("VERSION_NAME")
@@ -69,6 +80,8 @@ android {
         // Values from kds.properties.
         buildConfigField("String", "START_URL", "\"$kdsUrl\"")
         buildConfigField("String", "SCOPE", "\"$kdsScope\"")
+        buildConfigField("int", "VIEWPORT_WIDTH", "$kdsViewportWidth")
+        buildConfigField("boolean", "REMOTE_POINTER", "$kdsRemotePointer")
         resValue("string", "app_name", kdsAppName)
     }
 

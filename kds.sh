@@ -67,6 +67,8 @@ show_config() {
   info "App name     : $(get_prop APP_NAME)"
   info "Version code : $(get_prop VERSION_CODE)"
   info "Version name : $(get_prop VERSION_NAME)"
+  info "Screen width : $(get_prop VIEWPORT_WIDTH)   (VIEWPORT_WIDTH: auto or e.g. 1920)"
+  info "Remote ptr   : $(get_prop REMOTE_POINTER)   (REMOTE_POINTER: false = keys go to the page)"
 }
 
 # ---------------------------------------------------------------- URL checks

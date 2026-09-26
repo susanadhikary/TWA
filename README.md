@@ -28,6 +28,7 @@ the app in one step. See [Change the URL, scope or name](#change-the-url-scope-o
   - [Looks like an app, not a website](#looks-like-an-app-not-a-website)
   - [Browser features included](#browser-features-included)
   - [Permissions](#permissions)
+  - [Screen size and resolution](#screen-size-and-resolution)
   - [Remote control, mouse and keyboard](#remote-control-mouse-and-keyboard)
   - [Start on boot](#start-on-boot)
   - [Always-on reliability](#always-on-reliability)
@@ -155,23 +156,46 @@ Permissions*.
 None of this hardware is *required*, so the app installs on TVs without a
 camera, microphone or GPS.
 
+### Screen size and resolution
+
+TVs come in 720p, 1080p and 4K, with different pixel densities. Left alone,
+a WebView on most TVs reports a **960 × 540** screen to the page, whatever the
+TV's real resolution. Many responsive web UIs then switch to their tablet
+layout.
+
+The app fixes this with **`VIEWPORT_WIDTH`** in `kds.properties`:
+
+| `VIEWPORT_WIDTH` | What the KDS page sees | Use when |
+|---|---|---|
+| **`1920`** (default) | A **1920 × 1080** screen on every TV (720p, 1080p, 4K), scaled to fill it exactly with no scrolling. The same as a Full-HD desktop browser. | The KDS is designed for Full-HD screens (usual). |
+| `1280` | A 1280 × 720 screen: everything looks bigger. | Text is too small for the kitchen's viewing distance. |
+| `2560`, `3840`, … | A bigger canvas: everything looks smaller and more tickets fit. | Large 4K screens viewed up close. |
+| `auto` | Whatever the page's own `<meta name="viewport">` decides (usually 960 × 540 on TVs). | The KDS already adapts itself to TV WebViews. |
+
+The fixed width is applied to pages inside the app's scope, including
+single-page apps that add or change their viewport tag later. Zooming by staff
+is disabled. The app ignores the TV's system font-size setting (`textZoom` is
+fixed at 100%), so text sizes stay exactly as designed.
+
 ### Remote control, mouse and keyboard
 
-The app works with a **TV remote**, a **mouse**, touch and a keyboard at the
-same time.
+The KDS web UI is built for TV-remote navigation, so by default the app
+**passes the remote's keys straight to the page**. It doesn't intercept them.
 
-| Input | What it does |
+| Input | What it does (default, `REMOTE_POINTER=false`) |
 |---|---|
-| **D-pad** (arrows) | Moves an on-screen pointer. Hold to accelerate. |
-| **OK / Select / Enter** | Clicks where the pointer is. |
-| **Pointer against a screen edge** | Scrolls the page (or the list under the pointer) in that direction. |
-| **CH+ / CH−** or **Page Up / Page Down** | Scroll a page up or down. |
+| **D-pad** (arrows) | Sent to the page as arrow keys. The KDS moves its own focus/selection. |
+| **OK / Select / Enter** | Sent to the page as Enter. |
 | **MENU** (or F5 on a keyboard) | Reloads the KDS. |
 | **BACK** | Leaves fullscreen video, closes a pop-up, or goes back a page. On the first page, press **BACK twice** to exit, so the KDS isn't closed by accident. |
-| **Mouse / touch** | Work normally. The remote pointer hides itself. |
-| **Keyboard arrows** | Go straight to the page (for text fields and shortcuts). |
+| **Mouse / touch** | Work normally, at the same time as the remote. |
+| **Keyboard** | Goes to the page. |
 
-The pointer hides after 6 seconds without use.
+**Pointer mode (optional).** Set `REMOTE_POINTER=true` in `kds.properties` for
+sites that are *not* remote-friendly. The D-pad then moves an on-screen
+pointer (hold to accelerate), **OK** clicks, pushing the pointer against a
+screen edge scrolls, and **CH+/CH−** scroll a page. The pointer hides after
+6 seconds without use.
 
 ### Start on boot
 
@@ -204,6 +228,8 @@ Everything you'd normally change is in **[`kds.properties`](kds.properties)**:
 ```properties
 KDS_URL=https://pos.narayanipauroti.com.np/kds   # page the app opens (https only)
 KDS_SCOPE=https://pos.narayanipauroti.com.np/    # pages that get notifications, camera, location…
+VIEWPORT_WIDTH=1920                               # page layout width: 1920 = Full-HD on every TV, or auto
+REMOTE_POINTER=false                              # false = remote keys go to the KDS page
 APP_NAME=TapTill KDS                              # name on the TV home screen
 VERSION_CODE=2                                    # raise for every release: 3, 4, 5…
 VERSION_NAME=1.1.0                                # version shown to people
@@ -446,7 +472,14 @@ After the first install (not needed for updates):
 - **Permissions.** Web permission requests (geolocation, camera, microphone)
   are mapped to Android runtime permissions. System permission dialogs are
   queued one at a time.
-- **Remote pointer.** `CursorController` turns D-pad presses into a drawn
+- **Screen size.** With `VIEWPORT_WIDTH` set, `assets/kds_viewport.js` is
+  injected at document start for the scope's origin. It rewrites (or adds)
+  `<meta name="viewport" content="width=N">` and keeps it that way with a
+  `MutationObserver`. With `useWideViewPort` and `loadWithOverviewMode`, the
+  WebView scales that layout to fill the screen.
+- **Remote.** By default, key events go to the WebView unchanged, so the page's
+  own keyboard/remote navigation handles them (DPAD_CENTER arrives as Enter).
+  With `REMOTE_POINTER=true`, `CursorController` turns D-pad presses into a drawn
   pointer. OK sends touch events at the pointer, movement sends mouse hover
   events (so `:hover` styles work), and edge-push sends scroll-wheel events.
 - **Resilience.** Main-frame load errors show the offline screen and schedule a

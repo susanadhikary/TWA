@@ -126,6 +126,8 @@ VERSION_NAME=1.1.0
 |---|---|---|
 | `KDS_URL` | The page the app opens on start, after a reload (MENU key), and when it recovers from being offline. | Must be a full `https://` address. `http://` is refused by the build. |
 | `KDS_SCOPE` | The part of the site that counts as "the app", like `scope` in a PWA manifest. Pages under it get notifications, location, camera/microphone, printing, sharing and downloads. Pages outside it still open in the app, but without those features. | Full `https://` address on the **same host** as `KDS_URL`, and `KDS_URL` must be inside it. End it with `/`. Leave it empty to use the whole site (`https://host/`). |
+| `VIEWPORT_WIDTH` | Page layout width in CSS pixels. `1920` makes the KDS see a 1920 × 1080 screen on every TV (720p/1080p/4K), scaled to fit. `auto` lets the page's own viewport tag decide (usually 960 × 540 on TVs). | `auto` or a number from 320 to 7680. Smaller = bigger text (e.g. `1280`). Larger = more fits (e.g. `2560`). |
+| `REMOTE_POINTER` | `false`: the remote's arrows/OK go straight to the KDS page, which has its own TV-remote navigation. `true`: the arrows move an on-screen pointer and OK clicks. | `true` or `false`. |
 | `APP_NAME` | Name under the icon on the TV home screen, in *Settings → Apps*, in notifications and in dialog titles. | Any text. Apostrophes and quotes are fine. |
 | `VERSION_CODE` | Internal version number Android compares when updating. | Whole number. **Must be higher than the version installed on the TVs**, or the update is refused. |
 | `VERSION_NAME` | Version shown to people (e.g. in *Settings → Apps*). | Any text, e.g. `1.2.0`. |
@@ -450,6 +452,9 @@ commit real releases.
 |---|---|---|
 | Build fails: `KDS_URL must be a full https:// address` | URL is `http://`, has a typo, or is missing `https://`. | Use a full `https://...` address. The server needs a valid TLS certificate. |
 | Build fails: `KDS_URL (...) must be inside KDS_SCOPE (...)` | Scope is on another host, or the URL path doesn't start with the scope path. | Fix `KDS_SCOPE` (e.g. `https://newhost/`), or empty it to use the whole site. |
+| Build fails: `VIEWPORT_WIDTH must be auto or a width…` / `REMOTE_POINTER must be true or false` | Typo in those settings. | Use `auto` or a number like `1920`, and `true` or `false`. |
+| Text on the TV too small / too big | `VIEWPORT_WIDTH` doesn't suit the screen size or viewing distance. | Lower it for bigger text (`1280`), raise it for more content (`2560`), or use `auto`. Then rebuild. |
+| Remote arrows do nothing in the KDS | The page doesn't handle arrow keys on that screen, e.g. a login page on another site. | Use a mouse for that page, or set `REMOTE_POINTER=true` and rebuild. |
 | Build fails: `VERSION_CODE must be a positive whole number` | Letters or dots in `VERSION_CODE`. | Use a plain number like `3`. Put `1.2.0` in `VERSION_NAME` instead. |
 | TV says **"App not installed"** or **"package conflicts with an existing package"** | APK signed with a different key (e.g. the debug APK, or a new key). | Install the **release** APK signed with `taptill-kds-release.jks`. Check the signer digest (section 4, Option C, step 4). |
 | `adb` says `INSTALL_FAILED_VERSION_DOWNGRADE` | `VERSION_CODE` is not higher than the installed one. | Raise `VERSION_CODE` and rebuild. |

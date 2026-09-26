@@ -88,6 +88,11 @@ class MainActivity : Activity() {
 
     private var startScript: ScriptHandler? = null
     private var injectScriptOnPageLoad = false
+    private val viewportScript: String? by lazy {
+        if (BuildConfig.VIEWPORT_WIDTH <= 0) null
+        else assets.open("kds_viewport.js").bufferedReader().use { it.readText() }
+            .replace("__KDS_VIEWPORT_WIDTH__", BuildConfig.VIEWPORT_WIDTH.toString())
+    }
     private var lastPermissionState: String? = null
 
     private val handler = Handler(Looper.getMainLooper())
@@ -222,6 +227,10 @@ class MainActivity : Activity() {
         startScript = null
         injectScriptOnPageLoad = !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
         updateStartScript(wv)
+        // Fixed layout width (VIEWPORT_WIDTH) so the KDS looks the same on every TV.
+        viewportScript?.let { script ->
+            if (!injectScriptOnPageLoad) WebViewCompat.addDocumentStartJavaScript(wv, script, setOf(trustedOrigin))
+        }
     }
 
     private fun updateStartScript(wv: WebView) {
@@ -230,6 +239,12 @@ class MainActivity : Activity() {
             startScript?.remove()
             startScript = WebViewCompat.addDocumentStartJavaScript(wv, bridge.script(), setOf(trustedOrigin))
         }
+    }
+
+    /** Old WebViews without document-start scripts: inject on page load instead. */
+    private fun injectLegacyScripts(view: WebView) {
+        view.evaluateJavascript(bridge.script(), null)
+        viewportScript?.let { view.evaluateJavascript(it, null) }
     }
 
     /** Fallback for old WebViews without WEB_MESSAGE_LISTENER. */
@@ -295,12 +310,12 @@ class MainActivity : Activity() {
 
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
             mainFrameFailed = false
-            if (injectScriptOnPageLoad && isInScope(url)) view.evaluateJavascript(bridge.script(), null)
+            if (injectScriptOnPageLoad && isInScope(url)) injectLegacyScripts(view)
         }
 
         override fun onPageFinished(view: WebView, url: String?) {
             progress.visibility = View.GONE
-            if (injectScriptOnPageLoad && isInScope(url)) view.evaluateJavascript(bridge.script(), null)
+            if (injectScriptOnPageLoad && isInScope(url)) injectLegacyScripts(view)
             if (!mainFrameFailed) {
                 showOffline(false)
                 splash.visibility = View.GONE
@@ -809,7 +824,8 @@ class MainActivity : Activity() {
     // ---------------------------------------------------------------- Input
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (cursor.onKeyEvent(event)) return true
+        // With REMOTE_POINTER=false the D-pad/OK keys go straight to the page's own remote navigation.
+        if (BuildConfig.REMOTE_POINTER && cursor.onKeyEvent(event)) return true
         return super.dispatchKeyEvent(event)
     }
 
