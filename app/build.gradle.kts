@@ -11,8 +11,8 @@ android {
         applicationId = "np.com.narayanipauroti.kds"
         minSdk = 21
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         // URL of the PWA to load. Change here to point the app elsewhere.
         buildConfigField("String", "START_URL", "\"https://pos.narayanipauroti.com.np/kds\"")

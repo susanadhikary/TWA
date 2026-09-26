@@ -1,6 +1,8 @@
 <resources>
     <color name="background">#FF111418</color>
-    <color name="brand">#FFE65100</color>
+    <!-- TapTill brand (from the PWA manifest / icon) -->
+    <color name="brand">#FF00A76F</color>
+    <color name="icon_background">#FF19385A</color>
     <color name="text_primary">#FFFFFFFF</color>
     <color name="text_secondary">#FFB0B7C3</color>
 </resources>
