@@ -4,13 +4,23 @@ This guide covers changing the web address, name or version of the TapTill KDS
 Android TV app, building a new signed APK, and updating TVs that already have
 the app installed.
 
-**Short version:** edit `kds.properties`, raise `VERSION_CODE`, push, and
-download the signed APK from GitHub Actions.
+**Short version:** run the helper script. It asks for the URL, scope and name,
+raises the version for you, and builds the APK:
+
+| Your computer | Command |
+|---|---|
+| Windows | double-click **`kds.cmd`** (or run `.\kds.ps1` in PowerShell) |
+| macOS / Linux | `./kds.sh` |
+
+No build tools installed? Run the script with `--build none` (Windows:
+`-Build none`), then commit, push, and download the APK from GitHub Actions.
+Or edit `kds.properties` directly on GitHub.
 
 ---
 
 ## Contents
 
+0. [The helper script (easiest)](#0-the-helper-script-easiest)
 1. [What you can change, and where](#1-what-you-can-change-and-where)
 2. [Before you start (one-time setup)](#2-before-you-start-one-time-setup)
 3. [Change the URL: step by step](#3-change-the-url-step-by-step)
@@ -26,6 +36,79 @@ download the signed APK from GitHub Actions.
 
 ---
 
+## 0. The helper script (easiest)
+
+`kds.sh` (macOS/Linux/Git Bash) and `kds.ps1` / `kds.cmd` (Windows) do the
+whole job:
+
+1. Show the current URL, scope, name and version.
+2. Ask for the new values. Press Enter to keep a value.
+3. Check them: https only, and the URL must be inside the scope.
+4. Raise `VERSION_CODE` by 1 and the last number of `VERSION_NAME` (`1.1.0` → `1.1.1`).
+5. Save everything to `kds.properties`, keeping its comments.
+6. Build the APK into `dist/`, signed if you pass the keystore, and print its SHA-256.
+
+### Interactive
+
+```text
+$ ./kds.sh
+Current configuration (kds.properties)
+  URL          : https://pos.narayanipauroti.com.np/kds
+  Scope        : https://pos.narayanipauroti.com.np/
+  App name     : TapTill KDS
+  Version code : 2
+  Version name : 1.1.0
+
+URL the app should open [https://pos.narayanipauroti.com.np/kds]: https://kds.newdomain.com/kitchen
+Scope (pages that get notifications/camera/location) [https://kds.newdomain.com/]:
+App name [TapTill KDS]:
+Version name [1.1.1]:
+
+New configuration
+  URL          : https://kds.newdomain.com/kitchen
+  Scope        : https://kds.newdomain.com/
+  App name     : TapTill KDS
+  Version      : 1.1.1 (code 3)
+  Build        : release
+Save and continue? (y/n) [y]:
+```
+
+### One-line commands
+
+| Task | macOS / Linux | Windows PowerShell |
+|---|---|---|
+| Show current settings | `./kds.sh --show` | `.\kds.ps1 -Show` |
+| New URL, build signed APK | `./kds.sh --url https://kds.newdomain.com/kitchen --keystore ~/keys/taptill-kds-release.jks` | `.\kds.ps1 -Url https://kds.newdomain.com/kitchen -Keystore C:\keys\taptill-kds-release.jks` |
+| New URL **and** scope | `./kds.sh --url https://x.com/app/kds --scope https://x.com/app/` | `.\kds.ps1 -Url https://x.com/app/kds -Scope https://x.com/app/` |
+| Only update `kds.properties` (build on GitHub) | `./kds.sh --url https://x.com/kds --build none` | `.\kds.ps1 -Url https://x.com/kds -Build none` |
+| Rename the app | `./kds.sh --name "My Kitchen"` | `.\kds.ps1 -Name "My Kitchen"` |
+| Set the version name | add `--version-name 2.0.0` | add `-VersionName 2.0.0` |
+| Rebuild without changing the version | add `--no-bump` | add `-NoBump` |
+| Test build | add `--build debug` | add `-Build debug` |
+| Also save the signed APK in `releases/` | add `--save-release` | add `-SaveRelease` |
+| Skip the "Save and continue?" question | add `-y` | add `-Yes` |
+
+Notes:
+
+- **Signing:** pass `--keystore` / `-Keystore` (or set `KDS_KEYSTORE_PATH`).
+  The script asks for the password, or reads `KDS_KEYSTORE_PASSWORD`. The
+  alias defaults to `taptill-kds`. Without a keystore you get an *unsigned*
+  APK, which TVs won't install until it's signed.
+- **Scope when the URL changes:** if the new URL is still inside the current
+  scope, the scope is kept. Otherwise the script suggests the whole new site
+  (`https://newhost/`).
+- **Windows blocks the script** ("running scripts is disabled"): use
+  `kds.cmd`, or run
+  `powershell -ExecutionPolicy Bypass -File .\kds.ps1`.
+- **Build tools:** local builds need JDK 17+ and the Android SDK (see
+  [Option C](#option-c-build-on-your-own-computer)). If they're missing, the
+  script says so. Your new settings are already saved, so you can push and let
+  GitHub build instead.
+- After it finishes, commit `kds.properties` so the repo and GitHub builds use
+  the same settings. The script prints the exact `git` command.
+
+---
+
 ## 1. What you can change, and where
 
 Everything you normally need is in **one file at the root of the repo:
@@ -33,6 +116,7 @@ Everything you normally need is in **one file at the root of the repo:
 
 ```properties
 KDS_URL=https://pos.narayanipauroti.com.np/kds
+KDS_SCOPE=https://pos.narayanipauroti.com.np/
 APP_NAME=TapTill KDS
 VERSION_CODE=2
 VERSION_NAME=1.1.0
@@ -41,6 +125,7 @@ VERSION_NAME=1.1.0
 | Setting | What it does | Rules |
 |---|---|---|
 | `KDS_URL` | The page the app opens on start, after a reload (MENU key), and when it recovers from being offline. | Must be a full `https://` address. `http://` is refused by the build. |
+| `KDS_SCOPE` | The part of the site that counts as "the app", like `scope` in a PWA manifest. Pages under it get notifications, location, camera/microphone, printing, sharing and downloads. Pages outside it still open in the app, but without those features. | Full `https://` address on the **same host** as `KDS_URL`, and `KDS_URL` must be inside it. End it with `/`. Leave it empty to use the whole site (`https://host/`). |
 | `APP_NAME` | Name under the icon on the TV home screen, in *Settings → Apps*, in notifications and in dialog titles. | Any text. Apostrophes and quotes are fine. |
 | `VERSION_CODE` | Internal version number Android compares when updating. | Whole number. **Must be higher than the version installed on the TVs**, or the update is refused. |
 | `VERSION_NAME` | Version shown to people (e.g. in *Settings → Apps*). | Any text, e.g. `1.2.0`. |
@@ -50,11 +135,20 @@ VERSION_NAME=1.1.0
 Everything below follows `KDS_URL`, so you never need to touch code:
 
 - The start page, the MENU reload, and the automatic retry after the network drops.
-- The **trusted site**. Notifications, location, camera, microphone, printing,
-  sharing and downloads only work for pages on the **same host** as `KDS_URL`.
-  Moving the KDS to a new domain moves these permissions with it.
-- The rule that pages on other hosts can still open inside the app but get none
-  of those extra features.
+- If `KDS_SCOPE` is empty, the **trusted area** is the whole site of `KDS_URL`.
+  Moving the KDS to a new domain moves the permissions with it.
+- The MENU reload goes back to `KDS_URL` if the current page is outside the scope.
+
+### Choosing a scope
+
+| Situation | `KDS_SCOPE` |
+|---|---|
+| The whole site belongs to the POS (usual case) | `https://pos.example.com/` (or leave empty) |
+| The KDS lives under one path, and other paths on the same host are other apps you don't trust | `https://shared.example.com/pos/` |
+| Match your PWA exactly | the `scope` value from the site's `manifest.webmanifest` |
+
+`KDS_URL` must start with the scope, e.g. URL `https://x.com/pos/kds` with
+scope `https://x.com/pos/`.
 
 ### What does *not* change with the URL
 
@@ -121,9 +215,10 @@ Open the new URL in a browser on a computer:
 **On GitHub, no tools needed:**
 
 1. Open `kds.properties` in the repo and click the pencil (Edit) icon.
-2. Change `KDS_URL`, for example:
+2. Change `KDS_URL`, and `KDS_SCOPE` if the host changes (or empty it), for example:
    ```properties
    KDS_URL=https://kds.newdomain.com/kitchen
+   KDS_SCOPE=https://kds.newdomain.com/
    ```
 3. Raise the version, for example from:
    ```properties
@@ -187,6 +282,7 @@ changing `kds.properties`:
 1. Open **Actions → Build Android TV APK**.
 2. Click **Run workflow**.
 3. Fill **kds_url** with the address, e.g. `https://staging.example.com/kds`.
+   Optionally fill **kds_scope**. If empty, the whole site of that URL is used.
 4. Click **Run workflow** and download the artifact as in Option A.
 
 This build has the same app ID and version as `kds.properties`. Installing it
@@ -240,7 +336,8 @@ Result: `app/build/outputs/apk/release/TapTill-KDS-release.apk`
 ```sh
 ./gradlew assembleRelease -PKDS_URL=https://staging.example.com/kds
 ```
-Any setting can be overridden the same way: `-PAPP_NAME=...`, `-PVERSION_CODE=...`, `-PVERSION_NAME=...`.
+Any setting can be overridden the same way: `-PKDS_SCOPE=...`, `-PAPP_NAME=...`, `-PVERSION_CODE=...`, `-PVERSION_NAME=...`.
+(Passing an empty `-PKDS_SCOPE=` means "whole site of the URL".)
 
 **Quick test build (debug):**
 ```sh
@@ -334,7 +431,8 @@ commit real releases.
 ## 7. Checklist
 
 - [ ] New URL opens and works in a normal browser, over **https**.
-- [ ] `KDS_URL` updated in `kds.properties`.
+- [ ] `KDS_URL` updated in `kds.properties` (the `kds.sh` / `kds.ps1` script does this and the next two steps).
+- [ ] `KDS_SCOPE` still contains the URL (same host, URL path starts with the scope path).
 - [ ] `VERSION_CODE` **increased** (e.g. 2 → 3) and `VERSION_NAME` updated.
 - [ ] Change committed and pushed.
 - [ ] GitHub Actions run is green.
@@ -351,13 +449,15 @@ commit real releases.
 | Symptom | Cause | Fix |
 |---|---|---|
 | Build fails: `KDS_URL must be a full https:// address` | URL is `http://`, has a typo, or is missing `https://`. | Use a full `https://...` address. The server needs a valid TLS certificate. |
+| Build fails: `KDS_URL (...) must be inside KDS_SCOPE (...)` | Scope is on another host, or the URL path doesn't start with the scope path. | Fix `KDS_SCOPE` (e.g. `https://newhost/`), or empty it to use the whole site. |
 | Build fails: `VERSION_CODE must be a positive whole number` | Letters or dots in `VERSION_CODE`. | Use a plain number like `3`. Put `1.2.0` in `VERSION_NAME` instead. |
 | TV says **"App not installed"** or **"package conflicts with an existing package"** | APK signed with a different key (e.g. the debug APK, or a new key). | Install the **release** APK signed with `taptill-kds-release.jks`. Check the signer digest (section 4, Option C, step 4). |
 | `adb` says `INSTALL_FAILED_VERSION_DOWNGRADE` | `VERSION_CODE` is not higher than the installed one. | Raise `VERSION_CODE` and rebuild. |
 | `adb` says `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | Signing key differs from the installed app. | Use the original key. If truly lost: `adb uninstall np.com.narayanipauroti.kds` then install. This loses the saved login. |
 | App shows **"Cannot reach the kitchen display"** | TV can't reach the URL, or the URL is wrong. | Open the URL in a browser on the same network. The app retries every 10 s. Press **Retry now** after fixing. |
 | App shows **"Secure connection failed"** | Certificate problem, or the TV's date/time is wrong. | Fix the TV's date and time. Make sure the server's certificate is valid and complete. |
-| Notifications / camera / location stopped working after a domain change | The page now comes from a host that isn't `KDS_URL`'s host (e.g. the site redirects to another domain). | Set `KDS_URL` to the final address the site ends up on, then rebuild. |
+| Notifications / camera / location don't work on some pages | Those pages are outside `KDS_SCOPE`, or the site redirects to another host. | Widen `KDS_SCOPE` (e.g. to `https://host/`), or set `KDS_URL`/`KDS_SCOPE` to the final address the site ends up on. Then rebuild. |
+| `kds.ps1` "cannot be loaded because running scripts is disabled" | Windows execution policy. | Double-click `kds.cmd`, or run `powershell -ExecutionPolicy Bypass -File .\kds.ps1`. |
 | App doesn't open after the TV restarts | *Display over other apps* not allowed (Android 10+). | Allow it in *Settings → Apps → Special app access*, or run `adb shell appops set np.com.narayanipauroti.kds SYSTEM_ALERT_WINDOW allow`. |
 | GitHub run only has `release/TapTill-KDS-release-unsigned.apk` | Signing secrets not set. | Add the secrets (section 2.2), or sign it yourself (Option C, step 4). |
 | Old page still shows after update | The site's cached service worker. | Press **MENU** on the remote to reload. If needed: *Settings → Apps → TapTill KDS → Clear cache*. Staff stay logged in. |

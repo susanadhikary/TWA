@@ -9,14 +9,20 @@ on:
         description: "Optional: build for a different https:// URL (leave empty to use kds.properties)"
         required: false
         default: ""
+      kds_scope:
+        description: "Optional: app scope for that build, e.g. https://host/ (empty = whole site of the URL)"
+        required: false
+        default: ""
 
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
       KEYSTORE_BASE64: ${{ secrets.KDS_KEYSTORE_BASE64 }}
-      # Extra Gradle args; set when a URL is given on a manual run.
-      GRADLE_ARGS: ${{ inputs.kds_url != '' && format('-PKDS_URL={0}', inputs.kds_url) || '' }}
+      # Extra Gradle args for manual runs. A URL given without a scope uses its whole
+      # site as scope (empty -PKDS_SCOPE), instead of the scope in kds.properties.
+      KDS_URL_ARG: ${{ inputs.kds_url != '' && format('-PKDS_URL={0}', inputs.kds_url) || '' }}
+      KDS_SCOPE_ARG: ${{ (inputs.kds_url != '' || inputs.kds_scope != '') && format('-PKDS_SCOPE={0}', inputs.kds_scope) || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -29,7 +35,7 @@ jobs:
       - name: Build debug APK
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon $GRADLE_ARGS assembleDebug
+          ./gradlew --no-daemon $KDS_URL_ARG $KDS_SCOPE_ARG assembleDebug
 
       - name: Build signed release APK
         if: ${{ env.KEYSTORE_BASE64 != '' }}
@@ -40,14 +46,14 @@ jobs:
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           export KDS_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
-          ./gradlew --no-daemon $GRADLE_ARGS assembleRelease
+          ./gradlew --no-daemon $KDS_URL_ARG $KDS_SCOPE_ARG assembleRelease
           rm -f "$RUNNER_TEMP/release.jks"
 
       - name: Build unsigned release APK
         if: ${{ env.KEYSTORE_BASE64 == '' }}
         run: |
           echo "::notice::Signing secrets not set - release APK is unsigned (see README to add KDS_KEYSTORE_* secrets)."
-          ./gradlew --no-daemon $GRADLE_ARGS assembleRelease
+          ./gradlew --no-daemon $KDS_URL_ARG $KDS_SCOPE_ARG assembleRelease
 
       - uses: actions/upload-artifact@v4
         with:

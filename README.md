@@ -33,7 +33,7 @@ Google TV. You don't need to install Chrome or any other browser.
 | Cookies, localStorage, IndexedDB, service worker cache | Kept between restarts, so staff stay logged in. |
 | Autoplaying sounds | Allowed, so order alerts can play without a tap. |
 
-Only the KDS site gets these features. Any other site opened inside the app is refused.
+Only pages inside the app's scope (`KDS_SCOPE` in `kds.properties`) get these features. Other pages opened inside the app are refused them.
 
 On first launch, the app asks once for the location, camera, microphone and
 notification permissions.
@@ -106,24 +106,34 @@ KDS_KEYSTORE_PASSWORD=... KDS_KEY_ALIAS=taptill-kds KDS_KEY_PASSWORD=... \
 
 You can also sideload the APK with a USB drive or the *Downloader* app.
 
-## Configuration: changing the URL, name or version
+## Configuration: changing the URL, scope, name or version
 
-Everything you normally change is in one file, **[`kds.properties`](kds.properties)**:
+**Easiest:** run the helper script. It asks for the values, checks them, raises
+the version, and builds the APK into `dist/`:
+
+```sh
+./kds.sh                 # macOS / Linux / Git Bash
+.\kds.ps1                # Windows PowerShell (or double-click kds.cmd)
+```
+
+Or edit **[`kds.properties`](kds.properties)** yourself and push. GitHub Actions
+builds the APK:
 
 ```properties
-KDS_URL=https://pos.narayanipauroti.com.np/kds   # must be https://
+KDS_URL=https://pos.narayanipauroti.com.np/kds   # page the app opens (https only)
+KDS_SCOPE=https://pos.narayanipauroti.com.np/    # pages that get notifications/camera/location
 APP_NAME=TapTill KDS
 VERSION_CODE=2      # raise this for every release (3, 4, ...)
 VERSION_NAME=1.1.0
 ```
 
-Edit it, push, and GitHub Actions builds the new APK. To build once for a
-different URL without editing the file, use **Actions → Build Android TV APK →
-Run workflow** and fill in `kds_url`.
+To build once for a different URL without changing any file, use **Actions →
+Build Android TV APK → Run workflow** and fill in `kds_url` (and optionally
+`kds_scope`).
 
 **Full step-by-step guide:** [docs/CHANGE-URL-AND-REBUILD.md](docs/CHANGE-URL-AND-REBUILD.md).
-It covers building, signing, updating TVs, troubleshooting, and the rules you
-must not break.
+It covers the scripts, building, signing, updating TVs, troubleshooting, and
+the rules you must not break.
 
 - **Icons:** generated from the icons in the PWA manifest (`https://pos.narayanipauroti.com.np/manifest.webmanifest`). They live in `res/mipmap-*` (launcher), `res/drawable-*/ic_launcher_foreground.png` (adaptive), `res/drawable-xhdpi/banner.png` (TV banner) and `res/drawable-nodpi/app_logo.png` (splash).
 - **Signing an unsigned APK locally:** `scripts/sign-apk.sh <unsigned.apk> <keystore.jks>`.

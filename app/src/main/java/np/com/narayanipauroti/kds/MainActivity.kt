@@ -100,8 +100,9 @@ class MainActivity : Activity() {
     private val permissionQueue = ArrayDeque<PendingPermissions>()
     private var permissionInFlight: PendingPermissions? = null
 
-    private val startUri: Uri = Uri.parse(BuildConfig.START_URL)
-    private val trustedOrigin = "${startUri.scheme}://${startUri.host}"
+    /** App scope (like a PWA manifest "scope"): pages under it get the native browser features. */
+    private val scopeUri: Uri = Uri.parse(BuildConfig.SCOPE)
+    private val trustedOrigin = originOf(scopeUri)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -213,7 +214,7 @@ class MainActivity : Activity() {
         val origins = setOf(trustedOrigin)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             WebViewCompat.addWebMessageListener(wv, JsBridge.JS_OBJECT, origins) { _, message, _, isMainFrame, _ ->
-                if (isMainFrame) message.data?.let { bridge.handle(it) }
+                if (isMainFrame && isInScope(webView?.url)) message.data?.let { bridge.handle(it) }
             }
         } else {
             wv.addJavascriptInterface(LegacyBridge(), JsBridge.JS_OBJECT)
@@ -235,20 +236,34 @@ class MainActivity : Activity() {
     private inner class LegacyBridge {
         @JavascriptInterface
         fun postMessage(message: String) {
-            handler.post { if (isTrustedUrl(webView?.url)) bridge.handle(message) }
+            handler.post { if (isInScope(webView?.url)) bridge.handle(message) }
         }
     }
 
-    private fun isTrustedUrl(url: String?): Boolean {
-        if (url == null) return false
+    private fun originOf(uri: Uri): String = buildString {
+        append(uri.scheme?.lowercase()).append("://").append(uri.host?.lowercase())
+        if (uri.port != -1) append(':').append(uri.port)
+    }
+
+    /** True if [url] is inside the app scope: same origin and a path under the scope path. */
+    private fun isInScope(url: String?): Boolean {
+        if (url.isNullOrEmpty()) return false
         val uri = Uri.parse(url)
-        return uri.scheme == startUri.scheme && uri.host == startUri.host
+        if (originOf(uri) != trustedOrigin) return false
+        val path = uri.path.orEmpty().ifEmpty { "/" }
+        return path.startsWith(scopeUri.path.orEmpty().ifEmpty { "/" })
+    }
+
+    /** Permission prompts only carry an origin; trust it when it matches and the page is in scope. */
+    private fun isTrustedOrigin(origin: String?): Boolean {
+        if (origin.isNullOrEmpty() || originOf(Uri.parse(origin)) != trustedOrigin) return false
+        return isInScope(webView?.url) || isInScope(popupWebView?.url)
     }
 
     /** Sends a JSON message to the page's bridge script (trusted origin only). */
     fun sendToPage(json: String) {
         val wv = webView ?: return
-        if (!isTrustedUrl(wv.url)) return
+        if (!isInScope(wv.url)) return
         wv.evaluateJavascript("window.__kdsOnNative&&window.__kdsOnNative(${JSONObject.quote(json)})", null)
     }
 
@@ -280,12 +295,12 @@ class MainActivity : Activity() {
 
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
             mainFrameFailed = false
-            if (injectScriptOnPageLoad && isTrustedUrl(url)) view.evaluateJavascript(bridge.script(), null)
+            if (injectScriptOnPageLoad && isInScope(url)) view.evaluateJavascript(bridge.script(), null)
         }
 
         override fun onPageFinished(view: WebView, url: String?) {
             progress.visibility = View.GONE
-            if (injectScriptOnPageLoad && isTrustedUrl(url)) view.evaluateJavascript(bridge.script(), null)
+            if (injectScriptOnPageLoad && isInScope(url)) view.evaluateJavascript(bridge.script(), null)
             if (!mainFrameFailed) {
                 showOffline(false)
                 splash.visibility = View.GONE
@@ -309,7 +324,7 @@ class MainActivity : Activity() {
         @SuppressLint("WebViewClientOnReceivedSslError")
         override fun onReceivedSslError(view: WebView, sslHandler: SslErrorHandler, error: SslError) {
             sslHandler.cancel()
-            if (error.url == view.url || isTrustedUrl(error.url) && view.progress < 100) {
+            if (error.url == view.url || isInScope(error.url) && view.progress < 100) {
                 onMainFrameError(R.string.ssl_error_title, R.string.ssl_error_message)
             }
         }
@@ -357,7 +372,7 @@ class MainActivity : Activity() {
         // ----- Location
 
         override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
-            if (!isTrustedUrl(origin)) {
+            if (!isTrustedOrigin(origin)) {
                 callback.invoke(origin, false, false)
                 return
             }
@@ -369,7 +384,7 @@ class MainActivity : Activity() {
         // ----- Camera / microphone (getUserMedia)
 
         override fun onPermissionRequest(request: PermissionRequest) {
-            if (!isTrustedUrl(request.origin.toString())) {
+            if (!isTrustedOrigin(request.origin.toString())) {
                 request.deny()
                 return
             }
@@ -585,7 +600,7 @@ class MainActivity : Activity() {
         handler.removeCallbacks(retryRunnable)
         val wv = webView ?: return
         val current = wv.url
-        if (current.isNullOrEmpty() || !isTrustedUrl(current)) {
+        if (current.isNullOrEmpty() || !isInScope(current)) {
             wv.loadUrl(BuildConfig.START_URL)
         } else {
             wv.reload()

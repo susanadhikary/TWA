@@ -12,14 +12,17 @@ plugins {
 // e.g.  ./gradlew assembleRelease -PKDS_URL=https://example.com/kds
 // ---------------------------------------------------------------------------
 val kdsConfig = Properties().apply {
-    rootProject.file("kds.properties").inputStream().use { load(it) }
+    rootProject.file("kds.properties").reader(Charsets.UTF_8).use { load(it) }
 }
 
-fun kdsSetting(key: String): String {
-    val value = (findProperty(key) as String?) ?: kdsConfig.getProperty(key)
-    require(!value.isNullOrBlank()) { "kds.properties: $key is missing or empty" }
-    return value.trim()
-}
+fun kdsOptionalSetting(key: String): String? =
+    ((findProperty(key) as String?) ?: kdsConfig.getProperty(key))?.trim()?.takeIf { it.isNotEmpty() }
+
+fun kdsSetting(key: String): String =
+    kdsOptionalSetting(key) ?: error("kds.properties: $key is missing or empty")
+
+fun originOf(uri: URI): String =
+    "${uri.scheme.lowercase()}://${uri.host.lowercase()}" + if (uri.port != -1) ":${uri.port}" else ""
 
 val kdsUrl = kdsSetting("KDS_URL").also { url ->
     val uri = runCatching { URI(url) }.getOrNull()
@@ -29,6 +32,21 @@ val kdsUrl = kdsSetting("KDS_URL").also { url ->
     }
 }
 // Escaped for Android string resources (apostrophes/quotes would otherwise break the build).
+// Scope: pages under this prefix count as "the app" (native features enabled).
+// Defaults to the whole site of KDS_URL, like a PWA manifest without "scope".
+val kdsScope = (kdsOptionalSetting("KDS_SCOPE") ?: (originOf(URI(kdsUrl)) + "/")).also { scope ->
+    val uri = runCatching { URI(scope) }.getOrNull()
+    require(uri != null && uri.scheme == "https" && !uri.host.isNullOrBlank()) {
+        "kds.properties: KDS_SCOPE must be a full https:// address (got \"$scope\")"
+    }
+    val start = URI(kdsUrl)
+    val startPath = start.path.orEmpty().ifEmpty { "/" }
+    val scopePath = uri.path.orEmpty().ifEmpty { "/" }
+    require(originOf(start) == originOf(uri) && startPath.startsWith(scopePath)) {
+        "kds.properties: KDS_URL ($kdsUrl) must be inside KDS_SCOPE ($scope) - " +
+            "same https host, and the URL path must start with the scope path"
+    }
+}
 val kdsAppName = kdsSetting("APP_NAME")
     .replace("\\", "\\\\").replace("'", "\\'").replace("\"", "\\\"")
 val kdsVersionCode = kdsSetting("VERSION_CODE").toIntOrNull()?.takeIf { it > 0 }
@@ -50,6 +68,7 @@ android {
 
         // Values from kds.properties.
         buildConfigField("String", "START_URL", "\"$kdsUrl\"")
+        buildConfigField("String", "SCOPE", "\"$kdsScope\"")
         resValue("string", "app_name", kdsAppName)
     }
 
