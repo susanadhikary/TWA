@@ -17,6 +17,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       KEYSTORE_BASE64: ${{ secrets.KDS_KEYSTORE_BASE64 }}
       # Extra Gradle args for manual runs. A URL given without a scope uses its whole
@@ -54,6 +56,20 @@ jobs:
         run: |
           echo "::notice::Signing secrets not set - release APK is unsigned (see README to add KDS_KEYSTORE_* secrets)."
           ./gradlew --no-daemon $KDS_URL_ARG $KDS_SCOPE_ARG assembleRelease
+
+      # TEMPORARY: hand the unsigned release APK to the signing step outside CI.
+      - name: Export unsigned release APK
+        if: ${{ env.KEYSTORE_BASE64 == '' && github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/export"
+          cp app/build/outputs/apk/release/*.apk "$RUNNER_TEMP/export/"
+          cd "$RUNNER_TEMP/export"
+          git init -q -b apk-export-tmp
+          git add .
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" commit -qm "Unsigned release APK ${{ github.sha }} (temporary)"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" apk-export-tmp
 
       - uses: actions/upload-artifact@v4
         with:
