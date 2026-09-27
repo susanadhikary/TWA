@@ -173,9 +173,9 @@ The app fixes this with **`VIEWPORT_WIDTH`** in `kds.properties`:
 | `2560`, `3840`, … | A bigger canvas: everything looks smaller and more tickets fit. | Large 4K screens viewed up close. |
 | `auto` | Whatever the page's own `<meta name="viewport">` decides (usually 960 × 540 on TVs). | The KDS already adapts itself to TV WebViews. |
 
-The app sets the width natively: it lays out the web view at that CSS width and
-scales it to the screen. So it works on every TV and WebView version, whatever
-viewport tag the page uses. Zooming by staff is disabled. The app ignores the TV's system font-size setting (`textZoom` is
+The fixed width is applied to pages inside the app's scope, including
+single-page apps that add or change their viewport tag later. Zooming by staff
+is disabled. The app ignores the TV's system font-size setting (`textZoom` is
 fixed at 100%), so text sizes stay exactly as designed.
 
 ### Remote control, mouse and keyboard
@@ -473,12 +473,11 @@ After the first install (not needed for updates):
 - **Permissions.** Web permission requests (geolocation, camera, microphone)
   are mapped to Android runtime permissions. System permission dialogs are
   queued one at a time.
-- **Screen size.** With `VIEWPORT_WIDTH` set, the WebView is laid out natively
-  at `VIEWPORT_WIDTH × screen density` pixels wide, with `useWideViewPort` off,
-  so the page's CSS width is exactly `VIEWPORT_WIDTH`. The view is then scaled
-  (`scaleX`/`scaleY`, pivot at the top-left) to fill the screen. This doesn't
-  depend on the page's viewport tag or the WebView version. Touch and mouse
-  input go through the same transform (`MainActivity.applyFixedViewport()`).
+- **Screen size.** With `VIEWPORT_WIDTH` set, `assets/kds_viewport.js` is
+  injected at document start for the scope's origin. It rewrites (or adds)
+  `<meta name="viewport" content="width=N">` and keeps it that way with a
+  `MutationObserver`. With `useWideViewPort` and `loadWithOverviewMode`, the
+  WebView scales that layout to fill the screen.
 - **Remote.** By default, key events go to the WebView unchanged, so the page's
   own keyboard/remote navigation handles them (DPAD_CENTER arrives as Enter).
   With `REMOTE_POINTER=true`, `CursorController` turns D-pad presses into a drawn

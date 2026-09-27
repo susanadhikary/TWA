@@ -88,6 +88,11 @@ class MainActivity : Activity() {
 
     private var startScript: ScriptHandler? = null
     private var injectScriptOnPageLoad = false
+    private val viewportScript: String? by lazy {
+        if (BuildConfig.VIEWPORT_WIDTH <= 0) null
+        else assets.open("kds_viewport.js").bufferedReader().use { it.readText() }
+            .replace("__KDS_VIEWPORT_WIDTH__", BuildConfig.VIEWPORT_WIDTH.toString())
+    }
     private var lastPermissionState: String? = null
 
     private val handler = Handler(Looper.getMainLooper())
@@ -128,11 +133,6 @@ class MainActivity : Activity() {
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         )
 
-        // Keep the fixed page width (VIEWPORT_WIDTH) whenever the screen size changes.
-        container.addOnLayoutChangeListener { _, l, t, r, b, oldL, oldT, oldR, oldB ->
-            if (r - l != oldR - oldL || b - t != oldB - oldT) container.post { applyFixedViewport() }
-        }
-
         enterImmersiveMode()
         if (!createWebView(savedInstanceState)) return
         checkWebViewVersion()
@@ -151,7 +151,7 @@ class MainActivity : Activity() {
             showOffline(true, R.string.webview_missing_title, R.string.webview_missing_message)
             return false
         }
-        configureWebView(wv, allowPopups = true, fixedViewport = BuildConfig.VIEWPORT_WIDTH > 0)
+        configureWebView(wv, allowPopups = true)
         wv.webViewClient = KdsWebViewClient()
         wv.webChromeClient = KdsChromeClient(isPopup = false)
         installBridge(wv)
@@ -161,7 +161,6 @@ class MainActivity : Activity() {
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         )
         webView = wv
-        applyFixedViewport()
 
         if (savedInstanceState == null || wv.restoreState(savedInstanceState) == null) {
             wv.loadUrl(BuildConfig.START_URL)
@@ -171,7 +170,7 @@ class MainActivity : Activity() {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun configureWebView(wv: WebView, allowPopups: Boolean, fixedViewport: Boolean = false) {
+    private fun configureWebView(wv: WebView, allowPopups: Boolean) {
         wv.setBackgroundColor(ContextCompat.getColor(this, R.color.background))
         wv.isFocusable = true
         wv.isFocusableInTouchMode = true
@@ -193,10 +192,8 @@ class MainActivity : Activity() {
             setGeolocationEnabled(true)
             javaScriptCanOpenWindowsAutomatically = true
             setSupportMultipleWindows(allowPopups)
-            // Fixed viewport: the page's layout width is exactly the WebView's width in
-            // CSS px (its own <meta viewport> is ignored); applyFixedViewport() sizes it.
-            loadWithOverviewMode = !fixedViewport
-            useWideViewPort = !fixedViewport
+            loadWithOverviewMode = true
+            useWideViewPort = true
             textZoom = 100
             setSupportZoom(false)
             builtInZoomControls = false
@@ -230,36 +227,10 @@ class MainActivity : Activity() {
         startScript = null
         injectScriptOnPageLoad = !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
         updateStartScript(wv)
-    }
-
-    /**
-     * Makes the page see a screen exactly VIEWPORT_WIDTH CSS pixels wide on every TV.
-     *
-     * TVs report a small CSS screen (usually 960x540, whatever their resolution), which
-     * makes responsive pages show their tablet layout. Instead of relying on the page's
-     * viewport tag, the WebView is laid out at VIEWPORT_WIDTH x density pixels wide (so its
-     * CSS width is exactly VIEWPORT_WIDTH) and then scaled natively to fill the screen.
-     * Touch and mouse input are mapped through the same transform by the view system.
-     */
-    private fun applyFixedViewport() {
-        val wv = webView ?: return
-        val target = BuildConfig.VIEWPORT_WIDTH
-        val screenW = container.width
-        val screenH = container.height
-        if (target <= 0 || screenW <= 0 || screenH <= 0) return
-
-        val density = resources.displayMetrics.density
-        val scale = screenW / (target * density)
-        val width = Math.round(screenW / scale)
-        val height = Math.round(screenH / scale)
-        val lp = wv.layoutParams
-        if (lp == null || lp.width != width || lp.height != height) {
-            wv.layoutParams = FrameLayout.LayoutParams(width, height)
+        // Fixed layout width (VIEWPORT_WIDTH) so the KDS looks the same on every TV.
+        viewportScript?.let { script ->
+            if (!injectScriptOnPageLoad) WebViewCompat.addDocumentStartJavaScript(wv, script, setOf(trustedOrigin))
         }
-        wv.pivotX = 0f
-        wv.pivotY = 0f
-        wv.scaleX = scale
-        wv.scaleY = scale
     }
 
     private fun updateStartScript(wv: WebView) {
@@ -273,6 +244,7 @@ class MainActivity : Activity() {
     /** Old WebViews without document-start scripts: inject on page load instead. */
     private fun injectLegacyScripts(view: WebView) {
         view.evaluateJavascript(bridge.script(), null)
+        viewportScript?.let { view.evaluateJavascript(it, null) }
     }
 
     /** Fallback for old WebViews without WEB_MESSAGE_LISTENER. */
@@ -609,8 +581,7 @@ class MainActivity : Activity() {
         offlineView.visibility == View.VISIBLE || splash.visibility == View.VISIBLE -> null
         customView != null -> customView
         popupWebView != null -> popupWebView
-        // The container (not the WebView) so input goes through the WebView's scale transform.
-        else -> container
+        else -> webView
     }
 
     // ---------------------------------------------------------------- Errors / reload
